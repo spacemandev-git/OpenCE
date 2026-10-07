@@ -52,14 +52,13 @@ with ideas from VALORANT's netcode articles, keeping the 30 Hz tick:
   Until a client has the host's, the host takes none of its players'
   movement and none of its loading zones, and after any switch no loading
   zone switches again until every machine has the new BSP (ten seconds at
-  most). A loading zone into a
-  BSP the team hasn't been in brings every player to whoever crossed it,
-  as split screen does; one back into a BSP it has been in switches only
-  with two thirds of the living players at it (in the trigger, or within
-  15 world units of the player in it, about 45 metres), so one player can't
-  drag the team back through the level; a player held back is told how
-  many are there and how many it needs. A player outside the loaded BSP
-  and falling for two seconds is brought back beside a teammate. A dead
+  most). Only the host's crossing of a loading zone switches the BSP, and
+  it brings every player to the host, however far behind, so no one
+  running ahead or doubling back drags the team through the level (while
+  none of the host's players are alive, anyone's crossing does); a client
+  standing on a loading zone is told it waits for the host. A player
+  outside the loaded BSP and falling for two seconds is brought back beside
+  the host, else a teammate. A dead
   player watches a living teammate (`coop_spectate.c`) and comes back
   beside one once it is safe. With everyone dead they come back where they
   were at the last checkpoint, without a revert. A mission the scripts fail
@@ -173,7 +172,10 @@ the Elite major's and commander's armor); version 19 sends with the game's
 settings whether co-op's players collide with each other (Server Setup's PLAYER
 COLLISIONS: each machine's players then pass through the others'); version 20
 lists a public game with a password with its invite's token sealed with the
-password's key (`p2p_lobby.c`), a listing of another layout.
+password's key (`p2p_lobby.c`), a listing of another layout; version 21
+sends each killing blow again reliably and an object come to rest three
+times (a client waits for a player's blow before its body dies without one),
+and switches co-op's BSP on the host's crossing alone.
 
 A client plays by its host's rules: in another's game (searching for it,
 in its lobby, or playing it) the developer console, the telnet console
@@ -337,9 +339,12 @@ a pregame keep-alive every five seconds from the host
 4. (Done) Corrections: the host sends each client where its moving objects
    are (vehicles, items, bodies) as often as they are near that client's
    nearest player (every tick within 25 world units, every second within
-   60, every third within 120, every fourth further off), once more to
-   every client as an object comes to rest, and a few of those at rest,
-   round them all. A client puts its copies there, and the difference is
+   60, every third within 120, every fourth further off), to every client
+   three times over half a second as an object comes to rest (one lost
+   would leave a falling body hanging until its turn round all of them),
+   and a few of those at rest, round them all. A client takes the host's
+   word on whether each is at rest even when its copy is close enough to
+   leave where it is. A client puts its copies there, and the difference is
    drawn fading over a few ticks (`render_interpolation.c`) instead of a
    jump. A client drives its own player's vehicle and sends where it is,
    which the host takes within a tolerance, as it does its own player's
@@ -439,9 +444,11 @@ a pregame keep-alive every five seconds from the host
      player's screen effects to that player's machine alone, but for a
      weapon's own shake of the player firing it (no one's damage), which
      that player's machine shows itself at once. The killing blow is sent
-     unreliably: an actor's body the host says is dead (the objects' states
-     say so) that is still alive half a second on is killed with nothing
-     to show (a player's the units' states kill).
+     with the tick's other damage and once more reliably (a client replays
+     one blow of a unit only), so every body falls as the host's did: a
+     body the host says is dead (the objects' states say so of an actor's,
+     the units' states of a player's) that is still alive half a second on
+     is killed with nothing to show.
    - A client's own projectiles respond to what they hit as the game has
      them: the host's shields and health, which the client has, say
      whether the shield or the body took the hit, and how much is left of
